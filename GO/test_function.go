@@ -1,6 +1,15 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"sync"
+)
+
+// Structure partagée
+type SafeMap struct {
+	mu      sync.Mutex
+	map_lev map[string]map[string]int
+}
 
 // Initialise la matrice pour l'algorithme de Leveinstein
 func matrice(motA string, motB string) [][]int {
@@ -27,15 +36,28 @@ func matrice(motA string, motB string) [][]int {
 
 // Renvoie un map mis à jour. Le map a pour clé le nom de la première base de données
 // Sa valeur est une map qui a pour clé le nom de la seconde base de données et comme valeur la distance de Levenshtein
-func dictionnaire(motA string, motB string, dist int, dico map[string]map[string]int) map[string]map[string]int {
-	valeur, existe := dico[motA] // Récupère le map associé à la clé A
+func (s *SafeMap) MapLevenshtein(motA string, motB string, dist int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	valeur, existe := s.map_lev[motA] // Récupère le map associé à la clé A
 	// A faire : GESTION DE DOUBLONS
 	if existe == false {
 		valeur = make(map[string]int)
 	}
 	valeur[motB] = dist // On ajoute dans le map, le nouveau mot avec sa distance de Levenshtein
-	dico[motA] = valeur
-	return dico
+	s.map_lev[motA] = valeur
+}
+
+func (s *SafeMap) Display() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	fmt.Printf("\nDictionnaire:\n")
+	for k, v := range s.map_lev {
+		fmt.Printf("%v \n", k)
+		for k2, v2 := range v {
+			fmt.Printf("-> %v = %v \n", k2, v2)
+		}
+	}
 }
 
 func main() {
@@ -48,26 +70,24 @@ func main() {
 		}
 		fmt.Printf("\n")
 	}
-	exemple := make(map[string]map[string]int)
-	sous_ex := make(map[string]int)
-	sous_ex["chat"] = 1
-	exemple["chien"] = sous_ex
-	exemple = dictionnaire("chien", "niche", 5, exemple)
-	for k, v := range exemple {
-		fmt.Printf("%v \n", k)
-		for k2, v2 := range v {
-			fmt.Printf("-> %v = %v \n", k2, v2)
-		}
-	}
-	exemple = dictionnaire("dinosaure", "brebis", 12, exemple)
-	for k, v := range exemple {
-		fmt.Printf("%v \n", k)
-		for k2, v2 := range v {
-			fmt.Printf("-> %v = %v \n", k2, v2)
-		}
-	}
+	var wg sync.WaitGroup
 
 	// Partie avec la goroutine
-	 c := make(chan int) // Création du channel
-	 go 
+	c := SafeMap{map_lev: make(map[string]map[string]int)} // Création du channel
+	sous_ex2 := make(map[string]int)
+	sous_ex2["chat"] = 1
+	c.map_lev["chien"] = sous_ex2
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		c.MapLevenshtein("chien", "niche", 5)
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		c.MapLevenshtein("dinosaure", "brebis", 12)
+	}()
+	wg.Wait()
+	c.Display()
+
 }
