@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"os"
+	"strings"
 	"sync"
 )
 
@@ -9,6 +12,55 @@ import (
 type SafeMap struct {
 	mu      sync.Mutex
 	map_lev map[string]map[string]int
+}
+
+func extractionColonne(nomFichier string, nomColonne string) string {
+	// Lecture de nomFichier
+	fichierOriginal, err := os.Open(nomFichier)
+	if err != nil {
+		fmt.Printf("Erreur lors de l'ouverture du fichier : %v\n", err)
+		return ""
+	}
+	defer fichierOriginal.Close()
+
+	// Création du fichier
+	nomNvFichier := strings.Split(nomFichier, ".")[0] + "_" + nomColonne + ".csv"
+	nvFichier, err := os.OpenFile(nomNvFichier, os.O_CREATE|os.O_WRONLY|os.O_APPEND|os.O_TRUNC, 0644)
+	if err != nil {
+		fmt.Printf("Erreur lors de l'ouverture du fichier : %v\n", err)
+		return ""
+	}
+	defer nvFichier.Close()
+
+	scanner := bufio.NewScanner(fichierOriginal)
+
+	// Parcourt du fichier ligne par ligne pour extraire la colonne
+	var indiceColonne int = -1
+	for scanner.Scan() {
+		ligne := strings.Split(scanner.Text(), ";")
+		if indiceColonne == -1 { //Première ligne
+			// On trouve la place de la colonne
+			for index, elt := range ligne {
+				if elt == nomColonne {
+					indiceColonne = index
+				}
+			}
+			if indiceColonne == -1 {
+				fmt.Printf("Nom de colonne non trouvée dans le CSV\n")
+				return ""
+			}
+		}
+		_, err := nvFichier.WriteString(ligne[indiceColonne] + "\n")
+		if err != nil {
+			fmt.Printf("Erreur lors de l'écriture de la ligne : %v\n", err)
+			return ""
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		fmt.Printf("Erreur de lecture du fichier : %v\n", err)
+	}
+
+	return nomNvFichier
 }
 
 // Initialise la matrice pour l'algorithme de Leveinstein
@@ -37,6 +89,7 @@ func matrice(motA string, motB string) [][]int {
 // Renvoie un map mis à jour. Le map a pour clé le nom de la première base de données
 // Sa valeur est une map qui a pour clé le nom de la seconde base de données et comme valeur la distance de Levenshtein
 func (s *SafeMap) MapLevenshtein(motA string, motB string, dist int) {
+	// Ne pas prendre en compte les données si distance de Levenshtein trop élevée
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	valeur, existe := s.map_lev[motA] // Récupère le map associé à la clé A
@@ -61,6 +114,11 @@ func (s *SafeMap) Display() {
 }
 
 func main() {
+	f1 := "C:/Users/magui/Documents/Ecole/INSA/3TC/Projets/ELP/GO/data/test.csv"
+	nvFichier := extractionColonne(f1, "NOMBRE_COMPLETO")
+	fmt.Printf("Nom du fichier : %v\n", nvFichier)
+}
+func main2() {
 	var motA string = "CHAT"
 	var motB string = "CHIEN"
 	var mat [][]int = matrice(motA, motB)
