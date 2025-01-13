@@ -22,16 +22,15 @@ func min(a, b, c int) int {
 	return c
 }
 
-func comparaison(mot_A, mot_B string, matrice_vide [][]int) {
+func comparaison(mot_A, mot_B string, matrice_vide [][]int) int {
 	liste_A := strings.Split(mot_A, "")
-	fmt.Println(liste_A)
 	liste_B := strings.Split(mot_B, "")
-	fmt.Println(liste_B)
 
+	// Remplissage de la matrice
 	for i := 1; i < len(liste_A)+1; i++ {
 		for j := 1; j < len(liste_B)+1; j++ {
 			cout_substitution := 1
-			// si la lettre i du mot A est identique à la lettre j du mot B, alors la valeur de la cellule est 0
+			// Si la lettre i du mot A est identique à la lettre j du mot B, alors la valeur de la cellule est 0
 			if liste_A[i-1] == liste_B[j-1] {
 				cout_substitution = 0
 			}
@@ -40,7 +39,6 @@ func comparaison(mot_A, mot_B string, matrice_vide [][]int) {
 			suppression := matrice_vide[i-1][j] + 1
 			substitution := matrice_vide[i-1][j-1] + cout_substitution
 			matrice_vide[i][j] = min(insertion, suppression, substitution)
-
 		}
 	}
 
@@ -52,6 +50,9 @@ func comparaison(mot_A, mot_B string, matrice_vide [][]int) {
 		}
 		fmt.Println()
 	}
+
+	// Retourner la dernière valeur de la matrice (en bas à droite)
+	return matrice_vide[len(liste_A)][len(liste_B)]
 }
 
 func main() {
