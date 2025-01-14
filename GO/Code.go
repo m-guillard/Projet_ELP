@@ -64,10 +64,15 @@ func dico_to_csv(map_lev map[string]map[string]int, date string) {
 
 // Structure partagée
 type SafeMap struct {
-	mu      sync.Mutex
+	mu sync.Mutex
+	// La map a pour clé le nom de la première base de données
+	// Sa valeur est une map qui a pour clé le nom de la seconde base de données et comme valeur la distance de Levenshtein
 	map_lev map[string]map[string]int
 }
 
+// Extrait une colonne d'un fichier CSV et l'enregistre dans un nouveau fichier CSV
+// nomFichier : chemin du fichier où il faut extraire une colonne
+// nomColonne : le nom de colonne à extraire
 func extractionColonne(nomFichier string, nomColonne string) string {
 	// Lecture de nomFichier
 	fichierOriginal, err := os.Open(nomFichier)
@@ -75,10 +80,11 @@ func extractionColonne(nomFichier string, nomColonne string) string {
 		fmt.Printf("Erreur lors de l'ouverture du fichier : %v\n", err)
 		return ""
 	}
-	defer fichierOriginal.Close()
+	defer fichierOriginal.Close() // Fermeture du fichier quand on sort de la fonction
 
-	// Création du fichier
-	nomNvFichier := strings.Split(nomFichier, ".")[0] + "_" + nomColonne + ".csv"
+	// Création du fichier qui contiendra une seule colonne
+	nomNvFichier := strings.Split(nomFichier, ".")[0] + "_" + nomColonne + ".csv" // Nom du nouveau fichier
+	// Crée un nouveau fichier, si il existe déjà, on le réinitialise
 	nvFichier, err := os.OpenFile(nomNvFichier, os.O_CREATE|os.O_WRONLY|os.O_APPEND|os.O_TRUNC, 0644)
 	if err != nil {
 		fmt.Printf("Erreur lors de l'ouverture du fichier : %v\n", err)
@@ -86,13 +92,12 @@ func extractionColonne(nomFichier string, nomColonne string) string {
 	}
 	defer nvFichier.Close()
 
-	scanner := bufio.NewScanner(fichierOriginal)
-
 	// Parcourt du fichier ligne par ligne pour extraire la colonne
-	var indiceColonne int = -1
+	scanner := bufio.NewScanner(fichierOriginal)
+	var indiceColonne int = -1 // Indice de la colonne à conserver
 	for scanner.Scan() {
 		ligne := strings.Split(scanner.Text(), ";")
-		if indiceColonne == -1 { //Première ligne
+		if indiceColonne == -1 { // Première ligne
 			// On trouve la place de la colonne
 			for index, elt := range ligne {
 				if elt == nomColonne {
@@ -104,6 +109,7 @@ func extractionColonne(nomFichier string, nomColonne string) string {
 				return ""
 			}
 		}
+		// Ecrit dans le nouveau fichier la donnée de la colonne à conserver
 		_, err := nvFichier.WriteString(ligne[indiceColonne] + "\n")
 		if err != nil {
 			fmt.Printf("Erreur lors de l'écriture de la ligne : %v\n", err)
@@ -117,14 +123,16 @@ func extractionColonne(nomFichier string, nomColonne string) string {
 	return nomNvFichier
 }
 
-// Renvoie un map mis à jour. Le map a pour clé le nom de la première base de données
-// Sa valeur est une map qui a pour clé le nom de la seconde base de données et comme valeur la distance de Levenshtein
+// Met à jour la MapLevenshtein qui est une structure partagée
+// Paramètres : motA et motB : les mots comparés ; dist_int : distance de Levenshtein entre motA et motB
+// dist_max : si dist est inférieure à dist_max, on juge que motA et motB sont semblables et on conserve la valeur
 func (s *SafeMap) MapLevenshtein(motA string, motB string, dist int, dist_max int) {
 	if dist <= dist_max {
 		// Ne pas prendre en compte les données si distance de Levenshtein trop élevée
+		// Accès à la structure partagée
 		s.mu.Lock()
 		defer s.mu.Unlock()
-		valeur, existe := s.map_lev[motA] // Récupère le map associé à la clé A
+		valeur, existe := s.map_lev[motA] // Récupère la map associé à la clé A
 		// A faire : GESTION DE DOUBLONS
 		if existe == false {
 			valeur = make(map[string]int)
@@ -134,6 +142,7 @@ func (s *SafeMap) MapLevenshtein(motA string, motB string, dist int, dist_max in
 	}
 }
 
+// Affiche la Map, utile pour le deboggage
 func (s *SafeMap) Display() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
