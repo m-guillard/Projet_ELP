@@ -22,7 +22,7 @@ func main() {
 	serv, port := arguments[1], arguments[2]
 	conn, err := net.Dial("tcp", serv+":"+port)
 	if err != nil {
-		fmt.Printf("Erreur de connexion au serveur\n")
+		fmt.Printf("Erreur de connexion au serveur: %v\n", err)
 		return
 	}
 	defer conn.Close()
