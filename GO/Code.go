@@ -127,8 +127,7 @@ func extractionColonne(nomFichier string, nomColonne string) string {
 // Paramètres : motA et motB : les mots comparés ; dist_int : distance de Levenshtein entre motA et motB
 // dist_max : si dist est inférieure à dist_max, on juge que motA et motB sont semblables et on conserve la valeur
 func (s *SafeMap) MapLevenshtein(motA string, motB string, dist int, dist_max int) {
-	if dist <= dist_max {
-		// Ne pas prendre en compte les données si distance de Levenshtein trop élevée
+	if dist <= dist_max { // Ne pas prendre en compte les données si distance de Levenshtein trop élevée
 		// Accès à la structure partagée
 		s.mu.Lock()
 		defer s.mu.Unlock()
