@@ -179,9 +179,9 @@ func matrice(motA string, motB string) [][]int {
 
 func matrice_lev(mot_A, mot_B string, matrice [][]int) int {
 	liste_A := strings.Split(mot_A, "")
-	fmt.Println(liste_A)
+	//fmt.Println(liste_A)
 	liste_B := strings.Split(mot_B, "")
-	fmt.Println(liste_B)
+	//fmt.Println(liste_B)
 
 	for i := 1; i < len(liste_A)+1; i++ {
 		for j := 1; j < len(liste_B)+1; j++ {
@@ -219,43 +219,71 @@ func matrice_lev(mot_A, mot_B string, matrice [][]int) int {
 // dico_to_csv : transforme le dico final en csv final
 // safemap : création du type structure partagée
 
-func deroule() {
-	// On a deux mots
-	var mot_A string = "CHAT"
-	var mot_B string = "CHIEN"
-	dist_max := 1
+// Calcul parallèle des distances
+func deroule(noms1, noms2 string, dist_max, numGoRoutines int, safeMap *SafeMap) {
+	var wg sync.WaitGroup
+	tasks := make(chan [2]string, len(noms1)*len(noms2))
 
-	// On crée une matrice vide de longueur adaptée à ces deux mots
-	matrice_vide := matrice(mot_A, mot_B)
+	go func() {
+		for _, nomA := range noms1 {
+			for _, nomB := range noms2 {
+				tasks <- [2]string{string(nomA), string(nomB)} // Conversion explicite des runes en chaînes
+			}
+		}
+		close(tasks)
+	}()
 
-	// On remplit cette matrice avec l'algo de Levenshtein et on retourne la valeur de la distance de Levenshtein
-	Distance_Levenshtein := matrice_lev(mot_A, mot_B, matrice_vide)
+	for i := 0; i < numGoRoutines; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for pair := range tasks {
+				nomA, nomB := pair[0], pair[1]
+				mat := matrice(nomA, nomB)
+				distance := matrice_lev(nomA, nomB, mat)
+				safeMap.MapLevenshtein(nomA, nomB, distance, dist_max)
+			}
+		}()
+	}
 
-	// On ajoute ce lien entre les mots au dictionnaire partagé (si la distance est inférieure à dist_max)
-	MapLevenshtein(mot_A, mot_B, Distance_Levenshtein, dist_max)
-
+	wg.Wait() // attend que toutes les goroutines soient terminées
 }
 
 func main() {
-	// créer dico partagé, accès
-	var wg sync.WaitGroup                                  // crée groupe d'attente, on y ajoute les go routines, pour attendre qu'elles finissent pour créer le csv
-	c := SafeMap{map_lev: make(map[string]map[string]int)} // Création du channel
+	if len(os.Args) < 5 {
+		fmt.Println("Usage : go run main.go <fichier1.csv> <colonne1> <fichier2.csv> <colonne2> [dist_max] [nb_goroutines]")
+		return
+	}
 
-	// après, avec go routines, on aura pleins de mots à comparer
-	// for qui lance les go routines, de la syntaxe suivante
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		c.MapLevenshtein("dinosaure", "brebis", 12)
-	}()
+	fichier1 := os.Args[1]
+	colonne1 := os.Args[2]
+	fichier2 := os.Args[3]
+	colonne2 := os.Args[4]
 
-	// récupération des go routines, transfo
-	wg.Wait() // attend que toutes les goroutines soient terminées
+	dist_max := 3
+	// un 6ᵉ argument (index 5) est fourni pour dist_max ? Si oui, lu et assigné.
+	if len(os.Args) > 5 {
+		// fmt.Sscanf ==> convertir un argument en entier de manière sûre
+		fmt.Sscanf(os.Args[5], "%d", &dist_max)
+	}
+
+	nb_goroutines := 4
+	if len(os.Args) > 6 {
+		fmt.Sscanf(os.Args[6], "%d", &nb_goroutines)
+	}
+
+	noms1 := extractionColonne(fichier1, colonne1)
+
+	noms2 := extractionColonne(fichier2, colonne2)
+
+	c := SafeMap{map_lev: make(map[string]map[string]int)}
+	start := time.Now()
+	deroule(noms1, noms2, dist_max, nb_goroutines, &c)
+	fmt.Printf("Temps de calcul : %v\n", time.Since(start))
 
 	// param nomenclature fichier csv final
 	now := time.Now()
 	anneeMoisJour := now.Format("2006_01_02")
 
 	dico_to_csv(c.map_lev, anneeMoisJour)
-
 }
