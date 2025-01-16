@@ -73,6 +73,14 @@ func main() {
 			err = decoder.Decode(&data2)
 			gestion_erreur(err, "Décodage")
 			ecriture_csv(data2, nomFichier2)
+
+			// Appel du main
+			var data = []byte("Test")
+
+			// On renvoie le fichier avec les distances de Levenshtein au client
+			encoder := gob.NewEncoder(client)
+			err = encoder.Encode(data)
+			gestion_erreur(err, "Envoi via TCP")
 		}(client)
 
 	}

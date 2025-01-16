@@ -35,6 +35,14 @@ func lecture_csv(chemin string) []byte {
 	return data
 }
 
+func ecriture_csv(data []byte, fichier string) {
+	nvFichier, err := os.OpenFile(fichier, os.O_CREATE|os.O_WRONLY|os.O_APPEND|os.O_TRUNC, 0644)
+	defer nvFichier.Close()
+	gestion_erreur(err, "Creation du fichier")
+	err = os.WriteFile(fichier, data, 0644)
+	gestion_erreur(err, "Ecriture dans fichier")
+}
+
 func main() {
 	gob.Register([]byte{})
 	// On récupère les arguments de la ligne de commande
@@ -56,6 +64,7 @@ func main() {
 	data2 := lecture_csv(bdd2)
 
 	encoder := gob.NewEncoder(conn)
+	decoder := gob.NewDecoder(conn)
 
 	// Envoi les données au serveur
 	err = encoder.Encode(data1)
@@ -63,11 +72,14 @@ func main() {
 	err = encoder.Encode(data2)
 	gestion_erreur(err, "Envoi via TCP")
 
-	fmt.Print("Fichiers envoyés")
+	fmt.Print("Fichiers envoyés au serveur\n")
 
-	// On attend que le serveur réponde par un fichier
-	// msg := []byte("WAIT")
-	// _, err = conn.Write(msg)
-	// gestion_erreur(err, "Envoi via TCP")
+	// Réception du fichier final
+	var data []byte
+	nFichier := "final.csv"
+	err = decoder.Decode(&data)
+	gestion_erreur(err, "Décodage")
+	ecriture_csv(data, nFichier)
+	fmt.Printf("Fin de traitement, %q reçu\n", nFichier)
 
 }
