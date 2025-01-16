@@ -1,3 +1,6 @@
+// gérer l'espace pris en compte en trop dans le fichier ==> gérer avec un filtre de lignes vides ?
+// gérer par csv, pas juste avec des slices
+// vérifier goroutines : ici elles avancent pas la rapidité du truc
 package main
 
 import (
@@ -73,14 +76,17 @@ type SafeMap struct {
 // Extrait une colonne d'un fichier CSV et l'enregistre dans un nouveau fichier CSV
 // nomFichier : chemin du fichier où il faut extraire une colonne
 // nomColonne : le nom de colonne à extraire
-func extractionColonne(nomFichier string, nomColonne string) string {
+func extractionColonne(nomFichier string, nomColonne string) []string {
 	// Lecture de nomFichier
 	fichierOriginal, err := os.Open(nomFichier)
 	if err != nil {
 		fmt.Printf("Erreur lors de l'ouverture du fichier : %v\n", err)
-		return ""
+		return nil // Retourne une slice vide si erreur
 	}
-	defer fichierOriginal.Close() // Fermeture du fichier quand on sort de la fonction
+	defer fichierOriginal.Close()
+
+	// Liste des noms extraits
+	var valeurs []string
 
 	// Création du fichier qui contiendra une seule colonne
 	nomNvFichier := strings.Split(nomFichier, ".")[0] + "_" + nomColonne + ".csv" // Nom du nouveau fichier
@@ -88,7 +94,7 @@ func extractionColonne(nomFichier string, nomColonne string) string {
 	nvFichier, err := os.OpenFile(nomNvFichier, os.O_CREATE|os.O_WRONLY|os.O_APPEND|os.O_TRUNC, 0644)
 	if err != nil {
 		fmt.Printf("Erreur lors de l'ouverture du fichier : %v\n", err)
-		return ""
+		return nil // Retourne une slice vide si erreur
 	}
 	defer nvFichier.Close()
 
@@ -106,21 +112,25 @@ func extractionColonne(nomFichier string, nomColonne string) string {
 			}
 			if indiceColonne == -1 {
 				fmt.Printf("Nom de colonne non trouvée dans le CSV\n")
-				return ""
+				return nil // Retourne une slice vide si la colonne n'est pas trouvée
+			}
+		} else {
+			// Ajouter la valeur de la colonne extraite à la liste
+			valeurs = append(valeurs, ligne[indiceColonne])
+			// Ecrit dans le nouveau fichier la donnée de la colonne à conserver
+			_, err := nvFichier.WriteString(ligne[indiceColonne] + "\n")
+			if err != nil {
+				fmt.Printf("Erreur lors de l'écriture de la ligne : %v\n", err)
+				return nil // Retourne une slice vide en cas d'erreur, on ne peut pas juste mettre ""
 			}
 		}
-		// Ecrit dans le nouveau fichier la donnée de la colonne à conserver
-		_, err := nvFichier.WriteString(ligne[indiceColonne] + "\n")
-		if err != nil {
-			fmt.Printf("Erreur lors de l'écriture de la ligne : %v\n", err)
-			return ""
-		}
+
 	}
 	if err := scanner.Err(); err != nil {
 		fmt.Printf("Erreur de lecture du fichier : %v\n", err)
 	}
 
-	return nomNvFichier
+	return valeurs // Retourne la slice de valeurs
 }
 
 // Met à jour la MapLevenshtein qui est une structure partagée
@@ -220,17 +230,18 @@ func matrice_lev(mot_A, mot_B string, matrice [][]int) int {
 // safemap : création du type structure partagée
 
 // Calcul parallèle des distances
-func deroule(noms1, noms2 string, dist_max, numGoRoutines int, safeMap *SafeMap) {
+func deroule(noms1 []string, noms2 []string, dist_max, numGoRoutines int, safeMap *SafeMap) {
 	var wg sync.WaitGroup
 	tasks := make(chan [2]string, len(noms1)*len(noms2))
 
+	// Lancer les paires de mots à comparer
 	go func() {
-		for _, nomA := range noms1 {
-			for _, nomB := range noms2 {
-				tasks <- [2]string{string(nomA), string(nomB)} // Conversion explicite des runes en chaînes
+		for _, nomA := range noms1 { // noms1 est maintenant une slice
+			for _, nomB := range noms2 { // noms2 est aussi une slice
+				tasks <- [2]string{nomA, nomB} // Ajouter la paire de mots à la liste des tâches
 			}
 		}
-		close(tasks)
+		close(tasks) // Fermer le canal des tâches
 	}()
 
 	for i := 0; i < numGoRoutines; i++ {
@@ -239,9 +250,9 @@ func deroule(noms1, noms2 string, dist_max, numGoRoutines int, safeMap *SafeMap)
 			defer wg.Done()
 			for pair := range tasks {
 				nomA, nomB := pair[0], pair[1]
-				mat := matrice(nomA, nomB)
-				distance := matrice_lev(nomA, nomB, mat)
-				safeMap.MapLevenshtein(nomA, nomB, distance, dist_max)
+				mat := matrice(nomA, nomB)                             // Matrice de Levenshtein
+				distance := matrice_lev(nomA, nomB, mat)               // Calcul de la distance
+				safeMap.MapLevenshtein(nomA, nomB, distance, dist_max) // Stockage dans la map sécurisée
 			}
 		}()
 	}
@@ -272,18 +283,20 @@ func main() {
 		fmt.Sscanf(os.Args[6], "%d", &nb_goroutines)
 	}
 
+	// Récupérer les colonnes extraites sous forme de slices
 	noms1 := extractionColonne(fichier1, colonne1)
-
 	noms2 := extractionColonne(fichier2, colonne2)
 
+	// Crée la structure SafeMap
 	c := SafeMap{map_lev: make(map[string]map[string]int)}
 	start := time.Now()
+
+	// Appel à deroule avec les noms extraits
 	deroule(noms1, noms2, dist_max, nb_goroutines, &c)
 	fmt.Printf("Temps de calcul : %v\n", time.Since(start))
 
-	// param nomenclature fichier csv final
+	// Création du fichier CSV final
 	now := time.Now()
 	anneeMoisJour := now.Format("2006_01_02")
-
 	dico_to_csv(c.map_lev, anneeMoisJour)
 }
