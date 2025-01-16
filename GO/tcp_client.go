@@ -1,11 +1,10 @@
 package main
 
 import (
+	"encoding/gob"
 	"fmt"
 	"net"
 	"os"
-	"strconv"
-	"strings"
 )
 
 func gestion_erreur(err error, message string) {
@@ -15,51 +14,29 @@ func gestion_erreur(err error, message string) {
 	}
 }
 
-func bdd_to_binaire(chemin string) ([]byte, int) {
+func lecture_csv(chemin string) []byte {
+	// Ouverture du fichier CSV à lire
 	file, err := os.Open(chemin)
 	gestion_erreur(err, "Ouverture fichier")
+	defer file.Close()
+
 	// On récupère la taille du fichier en octets
 	fileInfo, err := file.Stat()
 	gestion_erreur(err, "Statistiques du fichier")
 	sizeFile := fileInfo.Size()
 
+	// Lecture des données
 	data := make([]byte, sizeFile)
-	n, err := file.Read(data)
+	_, err = file.Read(data)
 	gestion_erreur(err, "Lecture du fichier")
 	defer file.Close()
 
 	// Retourne l'intégralité du fichier en binaire et le nombre d'octets
-	return data[:n], int(sizeFile)
-}
-
-func envoi_segmentation(conn net.Conn, data []byte, segment int, tailleFichier int) { // Pas testé
-	for i := 0; i < int(tailleFichier/segment); i++ {
-		_, err := conn.Write(data[segment*i : segment*(i+1)])
-		gestion_erreur(err, "Envoi via TCP")
-	}
-	reste := tailleFichier % segment
-	if reste > 0 {
-		_, err := conn.Write(data[tailleFichier-reste:])
-		gestion_erreur(err, "Envoi via TCP des données restantes")
-	}
-	// Message de fin d'envoi à BDD
-	msgFin := []byte("END")
-	_, err := conn.Write(msgFin)
-	gestion_erreur(err, "Envoi via TCP")
-}
-
-func entete(conn net.Conn, nomFichier string, tailleFichier int, taillePaquet int) {
-
-	_, err := conn.Write([]byte("BEGIN"))
-	gestion_erreur(err, "Envoi via TCP")
-
-	msg := []byte(nomFichier + " " + strconv.Itoa(tailleFichier) + " " + strconv.Itoa(taillePaquet))
-	fmt.Printf("%q\n", msg)
-	_, err = conn.Write(msg)
-	gestion_erreur(err, "Envoi via TCP")
+	return data
 }
 
 func main() {
+	gob.Register([]byte{})
 	// On récupère les arguments de la ligne de commande
 	arguments := os.Args
 	if len(arguments) != 5 {
@@ -68,11 +45,6 @@ func main() {
 		return
 	}
 	serv, port, bdd1, bdd2 := arguments[1], arguments[2], arguments[3], arguments[4]
-	splitPath1 := strings.Split(bdd1, "/")
-	nom1 := splitPath1[len(splitPath1)-1]
-
-	splitPath2 := strings.Split(bdd2, "/")
-	nom2 := splitPath2[len(splitPath2)-1]
 
 	// Connexion du client
 	conn, err := net.Dial("tcp", serv+":"+port)
@@ -80,20 +52,22 @@ func main() {
 	defer conn.Close() // Ferme la connexion à la fin du programme
 
 	// On transforme les bases de données en binaire
-	data1, nbOctet1 := bdd_to_binaire(bdd1)
-	data2, nbOctet2 := bdd_to_binaire(bdd2)
+	data1 := lecture_csv(bdd1)
+	data2 := lecture_csv(bdd2)
 
-	// On segmente la base de données pour éviter la perte de données (par paquet de 1024)
-	// Pas testé
-	taillePaquet := 1024
-	entete(conn, nom1, nbOctet1, taillePaquet)
-	envoi_segmentation(conn, data1, taillePaquet, nbOctet1)
-	entete(conn, nom2, nbOctet2, taillePaquet)
-	envoi_segmentation(conn, data2, taillePaquet, nbOctet2)
+	encoder := gob.NewEncoder(conn)
+
+	// Envoi les données au serveur
+	err = encoder.Encode(data1)
+	gestion_erreur(err, "Envoi via TCP")
+	err = encoder.Encode(data2)
+	gestion_erreur(err, "Envoi via TCP")
+
+	fmt.Print("Fichiers envoyés")
 
 	// On attend que le serveur réponde par un fichier
-	msg := []byte("WAIT")
-	_, err = conn.Write(msg)
-	gestion_erreur(err, "Envoi via TCP")
+	// msg := []byte("WAIT")
+	// _, err = conn.Write(msg)
+	// gestion_erreur(err, "Envoi via TCP")
 
 }
