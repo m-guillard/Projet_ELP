@@ -1,5 +1,4 @@
-// gérer l'espace pris en compte en trop dans le fichier ==> gérer avec un filtre de lignes vides ?
-// gérer par csv, pas juste avec des slices
+// régler pb appel au gros fichier
 // vérifier goroutines : ici elles avancent pas la rapidité du truc
 package main
 
@@ -76,61 +75,68 @@ type SafeMap struct {
 // Extrait une colonne d'un fichier CSV et l'enregistre dans un nouveau fichier CSV
 // nomFichier : chemin du fichier où il faut extraire une colonne
 // nomColonne : le nom de colonne à extraire
-func extractionColonne(nomFichier string, nomColonne string) []string {
+// extractionColonne ne change pas, elle continue de créer les fichiers CSV intermédiaires
+func extractionColonne(nomFichier string, nomColonne string) string {
 	// Lecture de nomFichier
 	fichierOriginal, err := os.Open(nomFichier)
 	if err != nil {
 		fmt.Printf("Erreur lors de l'ouverture du fichier : %v\n", err)
-		return nil // Retourne une slice vide si erreur
+		return "" // Retourne une chaîne vide si erreur
 	}
 	defer fichierOriginal.Close()
 
-	// Liste des noms extraits
-	var valeurs []string
-
-	// Création du fichier qui contiendra une seule colonne
+	// Nom du fichier de sortie
 	nomNvFichier := strings.Split(nomFichier, ".")[0] + "_" + nomColonne + ".csv" // Nom du nouveau fichier
-	// Crée un nouveau fichier, si il existe déjà, on le réinitialise
-	nvFichier, err := os.OpenFile(nomNvFichier, os.O_CREATE|os.O_WRONLY|os.O_APPEND|os.O_TRUNC, 0644)
+
+	// Crée un fichier de sortie
+	nvFichier, err := os.OpenFile(nomNvFichier, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
-		fmt.Printf("Erreur lors de l'ouverture du fichier : %v\n", err)
-		return nil // Retourne une slice vide si erreur
+		fmt.Printf("Erreur lors de l'ouverture du fichier de sortie : %v\n", err)
+		return "" // Retourne une chaîne vide si erreur
 	}
 	defer nvFichier.Close()
 
-	// Parcourt du fichier ligne par ligne pour extraire la colonne
+	// Scanner pour lire ligne par ligne
 	scanner := bufio.NewScanner(fichierOriginal)
-	var indiceColonne int = -1 // Indice de la colonne à conserver
+	var indiceColonne int = -1
 	for scanner.Scan() {
 		ligne := strings.Split(scanner.Text(), ";")
-		if indiceColonne == -1 { // Première ligne
-			// On trouve la place de la colonne
+		if indiceColonne == -1 { // Recherche de l'indice correspondant au nom de colonne
 			for index, elt := range ligne {
 				if elt == nomColonne {
 					indiceColonne = index
+					break
 				}
 			}
 			if indiceColonne == -1 {
-				fmt.Printf("Nom de colonne non trouvée dans le CSV\n")
-				return nil // Retourne une slice vide si la colonne n'est pas trouvée
+				fmt.Printf("Nom de colonne non trouvé dans le fichier\n")
+				return ""
 			}
 		} else {
-			// Ajouter la valeur de la colonne extraite à la liste
-			valeurs = append(valeurs, ligne[indiceColonne])
-			// Ecrit dans le nouveau fichier la donnée de la colonne à conserver
-			_, err := nvFichier.WriteString(ligne[indiceColonne] + "\n")
-			if err != nil {
-				fmt.Printf("Erreur lors de l'écriture de la ligne : %v\n", err)
-				return nil // Retourne une slice vide en cas d'erreur, on ne peut pas juste mettre ""
+			// Vérifie que la ligne est complète
+			if indiceColonne < len(ligne) {
+				// Écriture de la cellule correspondante dans le fichier intermédiaire
+				_, err := nvFichier.WriteString(ligne[indiceColonne] + "\n")
+				if err != nil {
+					fmt.Printf("Erreur d'écriture dans le fichier : %v\n", err)
+					return ""
+				}
+			} else {
+				// Si la colonne n'existe pas dans la ligne, écrire une chaîne vide
+				_, err := nvFichier.WriteString("\n")
+				if err != nil {
+					fmt.Printf("Erreur d'écriture dans le fichier : %v\n", err)
+					return ""
+				}
 			}
 		}
-
 	}
 	if err := scanner.Err(); err != nil {
-		fmt.Printf("Erreur de lecture du fichier : %v\n", err)
+		fmt.Printf("Erreur lors de la lecture du fichier : %v\n", err)
+		return ""
 	}
 
-	return valeurs // Retourne la slice de valeurs
+	return nomNvFichier // Retourne le nom du fichier intermédiaire créé
 }
 
 // Met à jour la MapLevenshtein qui est une structure partagée
@@ -229,21 +235,59 @@ func matrice_lev(mot_A, mot_B string, matrice [][]int) int {
 // dico_to_csv : transforme le dico final en csv final
 // safemap : création du type structure partagée
 
-// Calcul parallèle des distances
-func deroule(noms1 []string, noms2 []string, dist_max, numGoRoutines int, safeMap *SafeMap) {
+// Fonction qui compare les mots en lisant depuis les fichiers CSV
+func derouleDepuisCSV(fichier1, fichier2 string, dist_max, numGoRoutines int, safeMap *SafeMap) {
 	var wg sync.WaitGroup
-	tasks := make(chan [2]string, len(noms1)*len(noms2))
+	tasks := make(chan [2]string, 1000) // Taille du canal à ajuster selon la mémoire
 
-	// Lancer les paires de mots à comparer
+	// Ouverture des fichiers CSV
+	f1, err := os.Open(fichier1)
+	if err != nil {
+		fmt.Printf("Erreur d'ouverture du fichier %s: %v\n", fichier1, err)
+		return
+	}
+	defer f1.Close()
+
+	f2, err := os.Open(fichier2)
+	if err != nil {
+		fmt.Printf("Erreur d'ouverture du fichier %s: %v\n", fichier2, err)
+		return
+	}
+	defer f2.Close()
+
+	// Scanner pour lire les fichiers ligne par ligne
+	scanner1 := bufio.NewScanner(f1)
+
+	// Lancer une goroutine pour ajouter des tâches dans le canal
 	go func() {
-		for _, nomA := range noms1 { // noms1 est maintenant une slice
-			for _, nomB := range noms2 { // noms2 est aussi une slice
-				tasks <- [2]string{nomA, nomB} // Ajouter la paire de mots à la liste des tâches
+		for scanner1.Scan() {
+			nomA := scanner1.Text()
+
+			// Ignorer les lignes vides dans fichier1
+			if strings.TrimSpace(nomA) == "" {
+				continue // Passe à la ligne suivante si la ligne est vide
+			}
+
+			// Revenir au début du fichier 2 pour chaque ligne de fichier 1
+			f2.Seek(0, 0) // Rewind du fichier 2
+			scanner2 := bufio.NewScanner(f2)
+
+			// Comparer nomA avec toutes les lignes de fichier 2
+			for scanner2.Scan() {
+				nomB := scanner2.Text()
+
+				// Ignorer les lignes vides dans fichier2
+				if strings.TrimSpace(nomB) == "" {
+					continue // Passe à la ligne suivante si la ligne est vide
+				}
+
+				tasks <- [2]string{nomA, nomB} // Ajouter la paire de mots dans le canal
 			}
 		}
-		close(tasks) // Fermer le canal des tâches
+		close(tasks) // Fermer le canal une fois toutes les tâches ajoutées
 	}()
 
+	// Lancer les goroutines pour traiter les paires de mots
 	for i := 0; i < numGoRoutines; i++ {
 		wg.Add(1)
 		go func() {
@@ -257,7 +301,7 @@ func deroule(noms1 []string, noms2 []string, dist_max, numGoRoutines int, safeMa
 		}()
 	}
 
-	wg.Wait() // attend que toutes les goroutines soient terminées
+	wg.Wait() // Attente de la fin de toutes les goroutines
 }
 
 func main() {
@@ -292,7 +336,8 @@ func main() {
 	start := time.Now()
 
 	// Appel à deroule avec les noms extraits
-	deroule(noms1, noms2, dist_max, nb_goroutines, &c)
+	// Appel à la fonction derouleDepuisCSV pour traiter les fichiers intermédiaires
+	derouleDepuisCSV(noms1, noms2, dist_max, nb_goroutines, &c)
 	fmt.Printf("Temps de calcul : %v\n", time.Since(start))
 
 	// Création du fichier CSV final
