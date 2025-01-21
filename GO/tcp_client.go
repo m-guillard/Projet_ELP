@@ -1,78 +1,63 @@
 package main
 
 import (
+	"encoding/gob"
 	"fmt"
 	"net"
 	"os"
-	"strconv"
-	"strings"
 )
 
 func gestion_erreur(err error, message string) {
+	// Arrête le programme si il y a une erreur et affiche un message d'erreur dans le terminal
 	if err != nil {
 		fmt.Printf("Erreur : %s - %v\n", message, err)
 		os.Exit(1) // Arrête le programme avec un code de retour 1 (indiquant une erreur)
 	}
 }
 
-func bdd_to_binaire(chemin string) ([]byte, int) {
+func lecture_csv(chemin string) []byte {
+	// Ouverture du fichier CSV à lire
 	file, err := os.Open(chemin)
 	gestion_erreur(err, "Ouverture fichier")
+	defer file.Close()
+
 	// On récupère la taille du fichier en octets
 	fileInfo, err := file.Stat()
 	gestion_erreur(err, "Statistiques du fichier")
 	sizeFile := fileInfo.Size()
 
+	// Lecture des données
 	data := make([]byte, sizeFile)
-	n, err := file.Read(data)
+	_, err = file.Read(data)
 	gestion_erreur(err, "Lecture du fichier")
 	defer file.Close()
 
-	// Retourne l'intégralité du fichier en binaire et le nombre d'octets
-	return data[:n], int(sizeFile)
+	// Retourne l'intégralité du fichier en binaire
+	return data
 }
 
-func envoi_segmentation(conn net.Conn, data []byte, segment int, tailleFichier int) { // Pas testé
-	for i := 0; i < int(tailleFichier/segment); i++ {
-		_, err := conn.Write(data[segment*i : segment*(i+1)])
-		gestion_erreur(err, "Envoi via TCP")
-	}
-	reste := tailleFichier % segment
-	if reste > 0 {
-		_, err := conn.Write(data[tailleFichier-reste:])
-		gestion_erreur(err, "Envoi via TCP des données restantes")
-	}
-	// Message de fin d'envoi à BDD
-	msgFin := []byte("END")
-	_, err := conn.Write(msgFin)
-	gestion_erreur(err, "Envoi via TCP")
-}
+func ecriture_csv(data []byte, fichier string) {
+	// Crée un nouveau fichier, si il existe, il est réinitialisé
+	nvFichier, err := os.OpenFile(fichier, os.O_CREATE|os.O_WRONLY|os.O_APPEND|os.O_TRUNC, 0644)
+	defer nvFichier.Close() // Ferme le fichier a la fin de la fonction
+	gestion_erreur(err, "Creation du fichier")
 
-func entete(conn net.Conn, nomFichier string, tailleFichier int, taillePaquet int) {
-
-	_, err := conn.Write([]byte("BEGIN"))
-	gestion_erreur(err, "Envoi via TCP")
-
-	msg := []byte(nomFichier + " " + strconv.Itoa(tailleFichier) + " " + strconv.Itoa(taillePaquet))
-	fmt.Printf("%q\n", msg)
-	_, err = conn.Write(msg)
-	gestion_erreur(err, "Envoi via TCP")
+	// Ecris les données dans le fichier créé
+	err = os.WriteFile(fichier, data, 0644)
+	gestion_erreur(err, "Ecriture dans fichier")
 }
 
 func main() {
+	gob.Register([]byte{}) // Enregistre le type []byte pour le gob
+
 	// On récupère les arguments de la ligne de commande
 	arguments := os.Args
-	if len(arguments) != 5 {
+	if len(arguments) != 7 { // On sort du main si les arguments ne sont pas corrects
 		fmt.Printf("Argument incorrect \n")
-		fmt.Printf("go run programme.go <adresse serveur> <port> <chemin base de donnee 1> <chemin base de donnee 2>")
+		fmt.Printf("go run programme.go <adresse serveur> <port> <chemin base de donnee 1> <chemin base de donnee 2> <nombre goroutines> <distance Levenshtein limite>")
 		return
 	}
-	serv, port, bdd1, bdd2 := arguments[1], arguments[2], arguments[3], arguments[4]
-	splitPath1 := strings.Split(bdd1, "/")
-	nom1 := splitPath1[len(splitPath1)-1]
-
-	splitPath2 := strings.Split(bdd2, "/")
-	nom2 := splitPath2[len(splitPath2)-1]
+	serv, port, bdd1, bdd2, nb_goroutines, dist_limite := arguments[1], arguments[2], arguments[3], arguments[4], arguments[5], arguments[6]
 
 	// Connexion du client
 	conn, err := net.Dial("tcp", serv+":"+port)
@@ -80,20 +65,32 @@ func main() {
 	defer conn.Close() // Ferme la connexion à la fin du programme
 
 	// On transforme les bases de données en binaire
-	data1, nbOctet1 := bdd_to_binaire(bdd1)
-	data2, nbOctet2 := bdd_to_binaire(bdd2)
+	data1 := lecture_csv(bdd1)
+	data2 := lecture_csv(bdd2)
 
-	// On segmente la base de données pour éviter la perte de données (par paquet de 1024)
-	// Pas testé
-	taillePaquet := 1024
-	entete(conn, nom1, nbOctet1, taillePaquet)
-	envoi_segmentation(conn, data1, taillePaquet, nbOctet1)
-	entete(conn, nom2, nbOctet2, taillePaquet)
-	envoi_segmentation(conn, data2, taillePaquet, nbOctet2)
+	// On transforme les paramètres en binaire
+	dataP := []byte(nb_goroutines + " " + dist_limite)
 
-	// On attend que le serveur réponde par un fichier
-	msg := []byte("WAIT")
-	_, err = conn.Write(msg)
+	// Envoi les données au serveur
+	encoder := gob.NewEncoder(conn)
+	// Envoie les paramètres au serveur
+	err = encoder.Encode(dataP)
+	gestion_erreur(err, "Envoi via TCP")
+	// Envoie la première base de données
+	err = encoder.Encode(data1)
+	gestion_erreur(err, "Envoi via TCP")
+	// Envoie la seconde base de données
+	err = encoder.Encode(data2)
 	gestion_erreur(err, "Envoi via TCP")
 
+	fmt.Print("Fichiers envoyés au serveur\n")
+
+	// Réception du fichier final de la part du serveur
+	decoder := gob.NewDecoder(conn)
+	var data []byte
+	nFichier := "final.csv"
+	err = decoder.Decode(&data)
+	gestion_erreur(err, "Décodage")
+	ecriture_csv(data, nFichier)
+	fmt.Printf("Fin de traitement, %q reçu\n", nFichier)
 }
