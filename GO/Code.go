@@ -26,7 +26,7 @@ func min(a, b, c int) int {
 	return c
 }
 
-func dico_to_csv(map_lev map[string]map[string]int, date string) {
+func dico_to_csv(map_lev map[string]map[string]int, date string) string {
 	// Construction nom fichier avec la date
 	fileName := fmt.Sprintf("output_%s.csv", date)
 
@@ -34,7 +34,7 @@ func dico_to_csv(map_lev map[string]map[string]int, date string) {
 	file, err := os.Create(fileName)
 	if err != nil {
 		fmt.Println("Erreur lors de la création du fichier :", err)
-		return
+		return ""
 	}
 	defer file.Close()
 
@@ -46,7 +46,7 @@ func dico_to_csv(map_lev map[string]map[string]int, date string) {
 	header := []string{"Nom_A", "Nom_B", "Distance_Levenshtein"}
 	if err := writer.Write(header); err != nil {
 		fmt.Println("Erreur lors de l'écriture de l'en-tête :", err)
-		return
+		return ""
 	}
 
 	// Parcourir la map imbriquée et écrire les lignes
@@ -55,12 +55,13 @@ func dico_to_csv(map_lev map[string]map[string]int, date string) {
 			row := []string{Nom_A, Nom_B, fmt.Sprintf("%d", Distance_Levenshtein)}
 			if err := writer.Write(row); err != nil {
 				fmt.Println("Erreur lors de l'écriture d'une ligne :", err)
-				return
+				return ""
 			}
 		}
 	}
 
 	fmt.Println("Fichier CSV généré avec succès : output.csv")
+	return fileName
 
 }
 
@@ -304,28 +305,28 @@ func derouleDepuisCSV(fichier1, fichier2 string, dist_max, numGoRoutines int, sa
 	wg.Wait() // Attente de la fin de toutes les goroutines
 }
 
-func main() {
-	if len(os.Args) < 5 {
-		fmt.Println("Usage : go run main.go <fichier1.csv> <colonne1> <fichier2.csv> <colonne2> [dist_max] [nb_goroutines]")
-		return
-	}
+func Main_code(fichier1 string, colonne1 string, fichier2 string, colonne2 string, dist_max int, nb_goroutines int) string {
+	// if len(os.Args) < 5 {
+	//	fmt.Println("Usage : go run main.go <fichier1.csv> <colonne1> <fichier2.csv> <colonne2> [dist_max] [nb_goroutines]")
+	// return
+	// }
 
-	fichier1 := os.Args[1]
-	colonne1 := os.Args[2]
-	fichier2 := os.Args[3]
-	colonne2 := os.Args[4]
+	// fichier1 := os.Args[1]
+	// colonne1 := os.Args[2]
+	// fichier2 := os.Args[3]
+	// colonne2 := os.Args[4]
 
-	dist_max := 3
+	// dist_max := 3
 	// un 6ᵉ argument (index 5) est fourni pour dist_max ? Si oui, lu et assigné.
 	if len(os.Args) > 5 {
 		// fmt.Sscanf ==> convertir un argument en entier de manière sûre
 		fmt.Sscanf(os.Args[5], "%d", &dist_max)
 	}
 
-	nb_goroutines := 4
-	if len(os.Args) > 6 {
-		fmt.Sscanf(os.Args[6], "%d", &nb_goroutines)
-	}
+	// nb_goroutines := 4
+	// if len(os.Args) > 6 {
+	// 	fmt.Sscanf(os.Args[6], "%d", &nb_goroutines)
+	// }
 
 	// Récupérer les colonnes extraites sous forme de slices
 	noms1 := extractionColonne(fichier1, colonne1)
@@ -343,5 +344,7 @@ func main() {
 	// Création du fichier CSV final
 	now := time.Now()
 	anneeMoisJour := now.Format("2006_01_02")
-	dico_to_csv(c.map_lev, anneeMoisJour)
+	fileName := dico_to_csv(c.map_lev, anneeMoisJour)
+
+	return fileName
 }

@@ -52,12 +52,12 @@ func main() {
 
 	// On récupère les arguments de la ligne de commande
 	arguments := os.Args
-	if len(arguments) != 7 { // On sort du main si les arguments ne sont pas corrects
+	if len(arguments) != 9 { // On sort du main si les arguments ne sont pas corrects
 		fmt.Printf("Argument incorrect \n")
-		fmt.Printf("go run programme.go <adresse serveur> <port> <chemin base de donnee 1> <chemin base de donnee 2> <nombre goroutines> <distance Levenshtein limite>")
+		fmt.Printf("go run programme.go <adresse serveur> <port> <chemin base de donnee 1> <nom de la colonne de la base de données 1> <chemin base de donnee 2> <nom de la colonne de la base de données 2> <nombre goroutines> <distance Levenshtein limite>")
 		return
 	}
-	serv, port, bdd1, bdd2, nb_goroutines, dist_limite := arguments[1], arguments[2], arguments[3], arguments[4], arguments[5], arguments[6]
+	serv, port, bdd1, nom_colonne1, bdd2, nom_colonne2, nb_goroutines, dist_limite := arguments[1], arguments[2], arguments[3], arguments[4], arguments[5], arguments[6], arguments[7], arguments[8]
 
 	// Connexion du client
 	conn, err := net.Dial("tcp", serv+":"+port)
@@ -69,7 +69,7 @@ func main() {
 	data2 := lecture_csv(bdd2)
 
 	// On transforme les paramètres en binaire
-	dataP := []byte(nb_goroutines + " " + dist_limite)
+	dataP := []byte(nb_goroutines + " " + dist_limite + " " + nom_colonne1 + " " + nom_colonne2)
 
 	// Envoi les données au serveur
 	encoder := gob.NewEncoder(conn)

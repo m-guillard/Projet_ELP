@@ -47,6 +47,27 @@ func ecriture_csv(data []byte, fichier string) {
 	gestion_erreur(err, "Ecriture dans fichier")
 }
 
+func lecture_csv(chemin string) []byte {
+	// Ouverture du fichier CSV à lire
+	file, err := os.Open(chemin)
+	gestion_erreur(err, "Ouverture fichier")
+	defer file.Close()
+
+	// On récupère la taille du fichier en octets
+	fileInfo, err := file.Stat()
+	gestion_erreur(err, "Statistiques du fichier")
+	sizeFile := fileInfo.Size()
+
+	// Lecture des données
+	data := make([]byte, sizeFile)
+	_, err = file.Read(data)
+	gestion_erreur(err, "Lecture du fichier")
+	defer file.Close()
+
+	// Retourne l'intégralité du fichier en binaire
+	return data
+}
+
 func main() {
 	gob.Register([]byte{}) // Enregistre le type []byte pour le gob
 
@@ -84,6 +105,7 @@ func main() {
 			gestion_erreur(err, "Conversion en int")
 			dist_limite, err := strconv.Atoi(listeParam[1])
 			gestion_erreur(err, "Conversion en int")
+			nom_colonne1, nom_colonne2 := listeParam[2], listeParam[3]
 
 			// Récupère le premier fichier CSV
 			nomFichier1 := nom_fichier(addrClient, "1")
@@ -100,8 +122,9 @@ func main() {
 			ecriture_csv(data2, nomFichier2)
 
 			// Appel du main pour le traitement (à implémenter)
-			fmt.Printf("Les paramètres récupérés sont : %v et %v", nb_goroutines, dist_limite)
-			var data = []byte("Test")
+			nv_file := Main_code(nomFichier1, nom_colonne1, nomFichier2, nom_colonne2, dist_limite, nb_goroutines)
+			// fmt.Printf("Les paramètres récupérés sont : %v et %v", nb_goroutines, dist_limite)
+			data := lecture_csv(nv_file)
 
 			// On renvoie le fichier avec les distances de Levenshtein au client
 			encoder := gob.NewEncoder(client)
