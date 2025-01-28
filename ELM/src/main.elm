@@ -7,7 +7,7 @@ import Html.Attributes exposing(style, placeholder)
 import Svg exposing(svg, line)
 import Svg.Attributes exposing(viewBox, width, height)
 -- import Parsing exposing (..)
--- import Dessin exposing (..)
+import Dessin exposing (..)
 
 -- MAIN
 
@@ -16,11 +16,12 @@ main =
 
 -- MODEL
 
-type alias Model = Int
+type alias Model =
+    { lines : List Point }  -- Nous stockons la liste de lignes dans le modèle
 
 init : Model
 init =
-    0
+    { lines = [] }  -- Par défaut, pas de lignes à dessiner - liste vide
 
 -- UPDATE
 
@@ -31,7 +32,12 @@ update : Msg -> Model -> Model
 update msg model = 
     case msg of
         Draw ->
-            model + 1
+            --model + 1
+            -- Exemple simple : ajouter une nouvelle ligne à chaque clic --> à changer, pour analyser via parsing les données envoyées dans le input
+            let
+                newLine = { x1 = 50, y1 = 50, x2 = 150, y2 = 50 } -- Exemple de ligne à ajouter
+            in
+            { model | lines = model.lines ++ [newLine] }
 
 -- VIEW
 
@@ -71,7 +77,7 @@ view model =
                 , width "500"
                 , height "500"
                 ]
-                []
-                --[ display model ]
+                --[]
+                (Dessin.display model.lines)  -- Utiliser Dessin.display pour afficher les lignes
             ]
         ]
