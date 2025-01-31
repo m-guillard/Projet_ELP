@@ -27,7 +27,7 @@ parseRepeat =
                                 parseListe
                                 |> Parser.andThen (\exprs ->
                                     token "]"
-                                        |> succeed (Fois n exprs)
+                                        |> succeed (Repeat n exprs)
                                 )
                             )
                         )
@@ -49,7 +49,7 @@ parseRight =
         )
 
 parseLeft : Parser.Parser Expression
-parseRight =
+parseLeft =
     token "Left"
         |> Parser.andThen (\_ ->
             spaces
