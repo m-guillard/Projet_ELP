@@ -2,7 +2,7 @@
 
 ## Description du projet
 Le but de ce projet est de comparer des bases de données où les données ont été rentrées à la main. Grâce à la distance de Levenshtein, on peut identifier les erreurs de frappe et ainsi en déduire que deux champs sont identiques.
-Ce projet prend en entrée deux bases de données sous un format CSV ainsi que le nom des colonnes à comparer. Il renvoie dans un nouveau fichier CSV, les valeurs de chaque bases de données qui ont une distance de Levenshtein faible (choisi par l'utilisateur).
+Ce projet prend en entrée deux bases de données sous un format CSV ainsi que le nom des colonnes à comparer. Il renvoie dans un nouveau fichier CSV, les valeurs de chaque bases de données qui ont une distance de Levenshtein faible (choisie par l'utilisateur).
 
 ## Lancer le projet
 Pour lancer le serveur : go run tcp_serveur.go Code.go NUMERO_PORT
