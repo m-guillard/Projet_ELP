@@ -1,5 +1,3 @@
-// régler pb appel au gros fichier
-// vérifier goroutines : ici elles avancent pas la rapidité du truc
 package main
 
 import (
@@ -149,7 +147,7 @@ func (s *SafeMap) MapLevenshtein(motA string, motB string, dist int, dist_max in
 		s.mu.Lock()
 		defer s.mu.Unlock()
 		valeur, existe := s.map_lev[motA] // Récupère la map associé à la clé A
-		// A faire : GESTION DE DOUBLONS
+
 		if existe == false {
 			valeur = make(map[string]int)
 		}
@@ -226,15 +224,6 @@ func matrice_lev(mot_A, mot_B string, matrice [][]int) int {
 	// }
 	return matrice[len(liste_A)][len(liste_B)]
 }
-
-// matrice_lev : remplit la matrice avec l'algo
-// extraction_colonne : prend fichier csv et renvoie un fichier csv avec une seule colonne
-// matrice : initialise la matrice vide avant l'algo
-// MapLevenshtein : renvoie un dictionnaire où la clé est un mot, et les valeurs sont des dictionnaires d'un mot et de sa distance au premier mot
-// Display : affiche les dico (pour débuggage)
-// min : trouve le min entre 3 nombres
-// dico_to_csv : transforme le dico final en csv final
-// safemap : création du type structure partagée
 
 // Fonction qui compare les mots en lisant depuis les fichiers CSV
 func derouleDepuisCSV(fichier1, fichier2 string, dist_max, numGoRoutines int, safeMap *SafeMap) {
