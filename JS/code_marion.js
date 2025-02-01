@@ -10,8 +10,13 @@ function score(prompt, mot, pioche, mots_trouves){
     }
     else // Erreur
     {
-        console.log(`Echec, le mot était ${mot}. J'enlève une carte de la pioche`);
-        pioche.shift(); // Supprime le premier mot de la liste
+        if(pioche.length>0){
+            console.log(`Echec, le mot était ${mot}.J'enlève une carte de la pioche`);
+            pioche.shift(); // Supprime le premier mot de la liste
+        }else{ // Plus de mots dans la pioche, on retire une carte des mots trouvés
+            console.log(`Echec, le mot était ${mot}.J'enlève une carte des mots trouvés`);
+            mots_trouves.shift(); // Supprime le premier mot de la liste
+        }
     }
 }
 
@@ -46,6 +51,12 @@ function proposition(indice) {
 
 function ecrireDansFichier(contenu, new_file=true) {
     if (new_file===true) {
-        fs.writeFile("historique")
+        fs.writeFile("historique.txt", contenu, (err)=> {
+            if (err) {
+                console.log('Erreur lors de l\'écriture dans le fichier :', err);
+            } else {
+                console.log(`Le contenu a été écrit dans ${nomFichier}`);
+            }
+        })
     }
 }

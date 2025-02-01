@@ -6,7 +6,8 @@ import Html.Events exposing (..)
 import Html.Attributes exposing(style, placeholder)
 import Svg exposing(svg, line)
 import Svg.Attributes exposing(viewBox, width, height)
--- import Parsing exposing (..)
+
+import NewParsing2 exposing (..)
 import Dessin exposing (..)
 
 -- MAIN
