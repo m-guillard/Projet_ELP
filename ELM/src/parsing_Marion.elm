@@ -1,12 +1,7 @@
--- OK - elm install elm/parser
 module Parsing exposing (..)
+
 import Parser exposing (..)
-import Basics exposing (pi, cos, sin)
 
-
--- Définir un alias pour un point (x, y)
-type alias Point =
-    { x : Float, y : Float }
 
 type Expression
     = Dir Int
@@ -124,51 +119,4 @@ test =
     in
     result
 
--- Fonction pour calculer la nouvelle position après un déplacement (angle, distance) : [(90, 20), (140, 10), (-55, 20)] -> lsite de points [{x = 0, y = 0}, {x = 0, y = 20}, {x = 7.66, y = 25.88}, {x = 2.91, y = 42.91}]
--- Mise à jour de `generatePoints` pour ignorer les déplacements nuls
-
-
-generatePoints : List Expression -> List Point
-generatePoints instructions =
-    let
-        (points, _, _) =
-            List.foldl
-                (\expr (acc, prevPoint, currentAngle) ->
-                    case expr of
-                        Forward dist ->
-                            let
-                                newPoint = calculateNewPosition prevPoint (currentAngle, toFloat dist)
-                                _ = Debug.log "Nouveau point calculé" newPoint
-                            in
-                            (acc ++ [newPoint], newPoint, currentAngle)
-
-                        Dir angle ->
-                            -- Mise à jour de l'angle seulement, sans ajouter de point
-                            (acc, prevPoint, currentAngle + toFloat angle)
-
-                        _ ->
-                            (acc, prevPoint, currentAngle)
-                )
-                ([], { x = 250, y = 250 }, 0) -- Angle initial à 0°
-                instructions
-    in
-    { x = 250, y = 250 } :: points  -- Ajouter le point de départ
-
-
-calculateNewPosition : Point -> (Float, Float) -> Point
-calculateNewPosition { x, y } (angle, distance) =
-    let
-        -- Convertir l'angle en radians
-        radians = angle * pi / 180
-
-        -- Calculer les nouvelles coordonnées
-        newX = x + (distance * cos radians)
-        newY = y + (distance * sin radians)
-    in
-    { x = newX, y = newY }
-
-
-
-
-
-
+    
