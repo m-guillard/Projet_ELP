@@ -1,20 +1,15 @@
-# projet_elp
-# elm
-C:\Users\alice\Documents\Alice\INSA\3A\S1\Projets_2\ELP\Projet_ELP\ELM>elm make src/main.elm --output=index.html
+# Projet ELM - TcTurtle
 
-PS C:\Users\alice\Documents\Alice\INSA\3A\S1\Projets_2\ELM_test> elm make src/Main.elm
+## Description du projet
+Le but de ce projet est de générer une page HTML qui prend en entrée une commande en TcTurtle. Le programme génère un dessin en fonction de l'entrée.
 
--> Partie View
-    - Partie HTML et CSS réalisée
-    - J'ai mis des imports en commentaires pour éviter les erreurs lors de la compilation
-    - Génère un fichier index.html qui correspond exactement au site projet
-    - Commande pour compiler : elm make Main.elm --output=index.html
-    - [ display model ] en commentaires pour pouvoir compiler et tester le fichier, display fait référence au module Display qui affiche le dessin
--> Update : gestion quand on clique sur bouton (envoi vers Parsing)
-    - Action à réaliser lorsqu'on clique sur Draw (change le model)
-    - Il faudra donc revoir la partie Model
--> Module Parsing (partie logique) : traiter les informations tapées sur la barre
+## Lancer le projet
+Pour générer HTML :  elm make  src/main.elm --output=index.html
+Sur la page HTML, index.html, exemple d'entrée :
+- [Repeat 360 [ Right 1, Forward 1]]
+- [Forward 100, Repeat 4 [Forward 50, Left 90], Forward 100]
+- [Repeat 36 [Right 10, Repeat 8 [Forward 25, Left 45]]]
+- [Repeat 8 [Left 45, Repeat 6 [Repeat 90 [Forward 1, Left 2], Left 90]]]
 
-** A voir plus tard
--> Init et update (à voir plus tard)
--> Affichage du dessin à partir de la structure de données de Parsing (à voir plus tard)
+## Contributeurs
+Alice INVERNIZZI et Marion GUILLARD
