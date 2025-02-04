@@ -1,3 +1,5 @@
+// mieux documenter fcts, et coommentaires un peu bateau
+// gestion erreurs : pas utile de fermer serveur pour erreur client, plutot fermer client sauf erreur due au serveur (ex arrive pas à se connecter)
 package main
 
 import (
@@ -96,7 +98,7 @@ func extractionColonne(nomFichier string, nomColonne string) string {
 	defer nvFichier.Close()
 
 	// Scanner pour lire ligne par ligne
-	scanner := bufio.NewScanner(fichierOriginal)
+	scanner := bufio.NewScanner(fichierOriginal) // bufio est un package standard de Go qui fournit des fonctionnalités pour la lecture et l'écriture de données en bufferisé. Cela signifie qu'il stocke temporairement les données en mémoire avant de les lire ou de les écrire
 	var indiceColonne int = -1
 	for scanner.Scan() {
 		ligne := strings.Split(scanner.Text(), ";")

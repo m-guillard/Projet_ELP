@@ -23,14 +23,7 @@
 
 
 // Reste à faire
-// 1- Mise en place
-//    -> 13 cartes avec mot au hasard
-//    -> Fichier ou API avec des mots au hasard
-// 2- Chaque joueur tape un indice
-//    
-//    -> vérifier que le mot est valide (différent du mot, pas la même racine)
 // 3- Annuler les indices identiques
-//    -> supprimer mots strictement identiques
 //    -> supprimer mots avec la même racine
 
 //

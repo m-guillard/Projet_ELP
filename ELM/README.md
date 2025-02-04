@@ -1,5 +1,8 @@
 # projet_elp
 # elm
+C:\Users\alice\Documents\Alice\INSA\3A\S1\Projets_2\ELP\Projet_ELP\ELM>elm make src/main.elm --output=index.html
+
+PS C:\Users\alice\Documents\Alice\INSA\3A\S1\Projets_2\ELM_test> elm make src/Main.elm
 
 -> Partie View
     - Partie HTML et CSS réalisée
