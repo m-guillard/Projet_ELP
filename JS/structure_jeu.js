@@ -26,5 +26,9 @@
 // 3- Annuler les indices identiques
 //    -> supprimer mots avec la même racine
 
-//
-// 8- Faire l'historique de jeux dans un fichier
+
+// passer de prompt à truc
+// version avec serveurs tcp
+// check livre pour rajouter ou non des notions
+// readme
+// check json pour faire fonctionner npm start

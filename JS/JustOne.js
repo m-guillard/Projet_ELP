@@ -6,7 +6,28 @@ const fs = require('fs');  // Correct
 
 function manche(nb_joueur, mot_a_deviner){
     console.log(`\nDébut de la maanche.`);
-    indices(nb_joueur, mot_a_deviner);  // Collecte des indices
+    let validation = 'n';
+
+    while (validation != 'y'){
+        let liste_indices = indices(nb_joueur, mot_a_deviner);  // Collecte des indices
+
+        // Affichage des indices aux joueurs les ayant proposés pour vérification
+        console.log("\nDevineur, tu peux t'écarter, car les Indics vont regarder la liste des indices à proposer, et se mettre d'accord sur le fait de la valider, ou d'en proposer de nouveaux.")
+        prompt("Appuyez sur Entrée pour continuer...");
+        console.log("\nVoici la liste des indices : \n");
+        console.log(liste_indices);
+        validation = prompt("Les validez-vous [y/n] ? ")
+        if (validation != 'y'){
+            validation = 'n'
+        }
+        cacher_mots()
+    }
+}
+
+function cacher_mots(){
+    for (i =0; i<35; i++){
+        console.log("\n-");
+    }
 }
 
 
@@ -24,8 +45,16 @@ function generation_pioche(nombre_mots, fichier){
 function jeu(){
     // D'abord demander et paramétrer le nombre de joueurs (int, pas chaine)
     let nb_joueur = parseInt(prompt('Nombre de joueurs ? '));
+    while (nb_joueur <2 || isNaN(nb_joueur)){
+        nb_joueur = parseInt(prompt('Il faut au moins 2 joueurs. A combien voulez-vous jouer ? '));
+    }
 
-    let nb_manches = parseInt(prompt('Quel nombre de manche jouer ?'))
+    let nb_manches = parseInt(prompt('Combien de manches jouer ? '))
+    while (isNaN(nb_joueur) || nb_manches <1){
+        nb_manches = parseInt(prompt('Il faut au moins jouer une manche. Combien de manches jouer ? '));
+    }
+    
+    console.log("\nLors de ce jeu, nous appelerons 'Devineur' le joueur qui devinera les mots, et les 'Indics' les joueurs chargés de proposer les indices au Devineur.")
 
     // Ensuite, Charger la liste des mots aléatoires
     let pioche = generation_pioche(nb_manches, 'mots.txt')
@@ -91,8 +120,8 @@ function indices(nb_joueur, mot_a_deviner) {
     }
 
     // Afficher tous les indices collectés
-    console.log("\nListe des indices des joueurs :");
-    console.log(liste_indice);
+    //console.log("\nListe des indices des joueurs :");
+    //console.log(liste_indice);
     return liste_indice
 }
 
