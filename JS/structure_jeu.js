@@ -32,3 +32,4 @@
 // check livre pour rajouter ou non des notions
 // readme
 // check json pour faire fonctionner npm start
+// si deux indices identiques, virer les deux et recommencer en jertant les indicdes identiques
