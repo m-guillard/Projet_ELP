@@ -1,26 +1,24 @@
 // PS C:\Users\alice\Documents\Alice\INSA\3A\S1\Projets_2\ELP\Projet_ELP\JS> node code_Alice.js
 
 const prompt = require('prompt-sync')();  // Charger le module prompt-sync
-const fs = require('fs');  // Correct
+const fs = require('fs-extra');  // Correct
 
 
 function manche(nb_joueur, mot_a_deviner){
-    console.log(`\nDébut de la maanche.`);
+    console.log(`\n Début de la maanche.`);
     let validation = 'n';
+    let liste_indices = []
 
     while (validation != 'y'){
-        let liste_indices = indices(nb_joueur, mot_a_deviner);  // Collecte des indices
+        liste_indices = indices(nb_joueur, mot_a_deviner);  // Collecte des indices
 
         // Affichage des indices aux joueurs les ayant proposés pour vérification
         console.log("\nDevineur, tu peux t'écarter, car les Indics vont regarder la liste des indices à proposer, et se mettre d'accord sur le fait de la valider, ou d'en proposer de nouveaux.")
         prompt("Appuyez sur Entrée pour continuer...");
         console.log("\nVoici la liste des indices : \n");
         console.log(liste_indices);
-        validation = prompt("Les validez-vous [y/n] ? ")
-        if (validation != 'y'){
-            validation = 'n'
-        }
-        cacher_mots()
+        validation = prompt("Les validez-vous [y/n] ? ");
+        cacher_mots();
     }
 
     return liste_indices;
@@ -57,6 +55,7 @@ function jeu(){
     while (isNaN(nb_joueur) || nb_manches <1){
         nb_manches = parseInt(prompt('Il faut au moins jouer une manche. Combien de manches jouer ? '));
     }
+    ecrireDansFichier("Début du jeu", true)
     
     console.log("\nLors de ce jeu, nous appelerons 'Devineur' le joueur qui devinera les mots, et les 'Indics' les joueurs chargés de proposer les indices au Devineur.")
 
@@ -68,8 +67,8 @@ function jeu(){
     // Ensuite, lancement d'une manche 
     for (let num_manche = 1; num_manche <= nb_manches; num_manche++) {
         liste_indices = manche(nb_joueur, pioche[0]); // Mot de la manche
-        let prop = proposition(liste_indices)
-        score(prop, pioche[0], pioche, mots_trouves, num_manche%nb_joueur)
+        let prop = proposition(liste_indices);
+        score(prop, pioche[0], pioche, mots_trouves, num_manche%nb_joueur);
     }
     calcul_score(mots_trouves)
         // proposition des indices pour chaque joueur
@@ -139,7 +138,7 @@ function score(prompt, mot, pioche, mots_trouves, joueur){
         console.log("Tu passes");
         ecrireDansFichier(`Le joueur ${joueur} passe.`);
     }
-    else if (verification(mot, prop) === true){
+    else if (comparaison(mot, prompt) === true){
         console.log(`Réussite, c'était bien le mot ${mot}`);
         mots_trouves.push(mot);
         ecrireDansFichier(`Le joueur ${joueur} a trouvé le mot ${mot}.`);
@@ -189,24 +188,16 @@ function proposition(indice) {
     return prop;
 }
 
-function ecrireDansFichier(contenu, new_file=false) {
-    contenu += "\n";
+async function ecrireDansFichier(contenu, new_file=false) {
     if (new_file===true) {
-        fs.writeFile("historique.txt", contenu, (err)=> {
-            if (err) {
-                console.log('Erreur lors de l\'écriture dans le fichier :', err);
-            } else {
-                console.log(`Le contenu a été écrit dans ${nomFichier}`);
-            }
-        })
+        const mode = 'w';
     }else {
-        fs.appendFile("historique.txt", contenu + '\n', (err) => {
-            if (err) {
-                console.log('Erreur lors de l\'ajout dans le fichier :', err);
-            } else {
-                console.log(`Le texte a été ajouté dans historique.txt`);
-            }
-        });
+        const mode = 'a';
+    }
+    try{
+        await fs.writeFile("historique.txt", contenu, {flag: mode});
+    } catch(err) {
+        console.log('Erreur lors de l\'écriture dans le fichier :', err);
     }
 
 }

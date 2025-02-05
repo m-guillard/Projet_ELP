@@ -1,6 +1,9 @@
-Fin du jeu ! Score : 0 points.
-0 a proposé "ilz", mais le mot était "carnaval".
-Mario a proposé "maison", mais le mot était "clair de lune".
-Mari passe.
-Alice a proposé "hlki", mais le mot était "tourbillon".
-Fin du jeu ! Score : 0 points.
+Début du jeu
+Le joueur 1 a proposé le mot 0.
+
+Une carte de la pioche a été enlevée.
+
+Fin du jeu ! Les joueurs ont un total de 0 points.
+
+Le mot à trouver était clair de lune.
+
