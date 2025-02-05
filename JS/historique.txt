@@ -1,0 +1,9 @@
+Début du jeu
+Le joueur 1 a proposé le mot 0.
+
+Une carte de la pioche a été enlevée.
+
+Fin du jeu ! Les joueurs ont un total de 0 points.
+
+Le mot à trouver était clair de lune.
+
