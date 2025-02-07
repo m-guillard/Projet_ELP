@@ -5,3 +5,19 @@
     "string-similarity": "^4.0.4"
   }
 }
+{
+  "name": "Projet_ELP",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Projet ELP en JavaScript",
+  "main": "test.js",
+  "dependencies": {
+    "prompt-sync": "^4.2.0",
+    "string-similarity-js": "^1.0.5"
+  },
+  "scripts": {
+    "start": "node test.js"
+  },
+  "author": "Ton Nom",
+  "license": "MIT"
+}
