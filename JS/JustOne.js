@@ -215,7 +215,7 @@ function proposition(devineur, liste_indices_conserves) {
         console.log("Dommage, pas d'indices pour cette fois (eh oui fallait les varier oupsi)");
     }
 
-    console.log("\n🤔 Vous avez le droit à un seul essai. Si vous voulez passez, tapez 0");
+    console.log("\n🤔 Tu as le droit à un seul essai. Si tu veux passez, tape 0");
     let prop = prompt(`${devineur}, quelle est ta proposition ? `);
     return prop;
 }
