@@ -3,33 +3,29 @@
 const prompt = require('prompt-sync')();  // Charger le module prompt-sync
 const fs = require('fs-extra');  // Correct
 const stringSimilarity = require("string-similarity");
+const randomWordFR = require('random-word-fr');
 
 
-function manche(nb_joueur, mot_a_deviner){
+function manche(indics, mot_a_deviner){
     console.log(`\n Début de la maanche.`);
-    let validation = 'n';
-    let liste_indices = []
 
-    while (validation != 'y'){
-        liste_indices = indices(nb_joueur, mot_a_deviner);  // Collecte des indices
+    let [liste_indices, liste_indices_conserves] = indices(indics, mot_a_deviner);
+    console.log("\n🔍 Voici la liste des indices proposés :");
+    console.log(liste_indices);
 
-        // Affichage des indices aux joueurs les ayant proposés pour vérification
-        console.log("\nDevineur, tu peux t'écarter, car les Indics vont regarder la liste des indices à proposer, et se mettre d'accord sur le fait de la valider, ou d'en proposer de nouveaux.")
-        prompt("Appuyez sur Entrée pour continuer...");
-        console.log("\nVoici la liste des indices : \n");
-        console.log(liste_indices);
-        validation = prompt("Les validez-vous [y/n] ? ");
-        cacher_mots();
-    }
+    console.log("\n✅ Voici la liste des indices conservés : ");
+    console.log(liste_indices_conserves)
+    prompt('Appuyer sur Entrée pour lancer la manche.')
 
-    return liste_indices;
+    cacher_mots();
     
+    return [liste_indices, liste_indices_conserves];
 
 }
 
 function cacher_mots(){
     for (i =0; i<35; i++){
-        console.log("\n-");
+        console.log("\n");
     }
 }
 
@@ -38,38 +34,68 @@ function generation_pioche(nombre_mots, fichier){
     let mots = fs.readFileSync(fichier, 'utf8').split('\n').map(mot => mot.trim()); // Correction de FileSystem -> fs
     const liste_mots_deviner = [];
     for (let i = 0; i < nombre_mots; i++){
-        let mot_alea = mots[Math.floor(Math.random() * mots.length)]; // Ajout de mot_alea
+        // let mot_alea = mots[Math.floor(Math.random() * mots.length)]; // Ajout de mot_alea
+        let mot_alea = randomWordFR()
         liste_mots_deviner.push(mot_alea);
     }
-    console.log("Mots générés pour la partie :", liste_mots_deviner);
     return liste_mots_deviner;
 }
 
 function jeu(){
+    ecrireDansFichier(`Début jeu \n`, true);
     // D'abord demander et paramétrer le nombre de joueurs (int, pas chaine)
     let nb_joueur = parseInt(prompt('Nombre de joueurs ? '));
     while (nb_joueur <2 || isNaN(nb_joueur)){
         nb_joueur = parseInt(prompt('Il faut au moins 2 joueurs. A combien voulez-vous jouer ? '));
     }
 
+    let noms_joueurs = [];
+    for (let i = 0; i < nb_joueur; i++) {
+        let nom = prompt(`Nom du joueur ${i + 1} : `);
+        noms_joueurs.push(nom);
+    }
+
     let nb_manches = parseInt(prompt('Combien de manches jouer ? '))
     while (isNaN(nb_joueur) || nb_manches <1){
         nb_manches = parseInt(prompt('Il faut au moins jouer une manche. Combien de manches jouer ? '));
     }
-    ecrireDansFichier("Début du jeu", true)
     
     console.log("\nLors de ce jeu, nous appelerons 'Devineur' le joueur qui devinera les mots, et les 'Indics' les joueurs chargés de proposer les indices au Devineur.")
-
-    // Ensuite, Charger la liste des mots aléatoires
-    let pioche = generation_pioche(nb_manches, 'mots.txt')
-    let mots_trouves = []
-    let liste_indices = []
+    console.log("\n🎲 Chaque joueur sera Devineur une fois avant que la boucle recommence.");
+    
+    let pioche = generation_pioche(nb_manches, 'mots.txt');
+    let mots_trouves = [];
+    let anciens_devineurs = [];
+    let num_manche = 1;
 
     // Ensuite, lancement d'une manche 
-    for (let num_manche = 1; num_manche <= nb_manches; num_manche++) {
-        liste_indices = manche(nb_joueur, pioche[0]); // Mot de la manche
-        let prop = proposition(liste_indices);
-        score(prop, pioche[0], pioche, mots_trouves, num_manche%nb_joueur);
+    while (pioche.length >0){
+        console.log(`\n--- Manche ${num_manche} ---`);
+
+        // Si tous les joueurs sont passés, on reset la liste
+        if (anciens_devineurs.length === noms_joueurs.length) {
+            anciens_devineurs = [];
+        }
+
+        // Choisir un Devineur parmi ceux qui n'ont pas encore joué ce cycle
+        let candidats = noms_joueurs.filter(nom => !anciens_devineurs.includes(nom));
+        let devineur = candidats[Math.floor(Math.random() * candidats.length)];
+        anciens_devineurs.push(devineur);
+
+        // Autres joueurs = Indics
+        let indics = noms_joueurs.filter(nom => nom !== devineur);
+
+        console.log(`\n🎯 Le Devineur est : ${devineur}`);
+        console.log(`💡 Les Indics sont : ${indics.join(', ')}`);
+
+        console.log("\n🎯 Devineur, éloigne-toi !");
+        prompt("📢 Indics, appuyez sur Entrée quand vous êtes prêts...");
+        console.log(`Le mot à faire deviner pour cette manche est ${pioche[0]}`);
+
+        let [liste_indices, liste_indices_conserves] = manche(indics, pioche[0]); // Mot de la manche
+        let prop = proposition(devineur, liste_indices_conserves);
+        [pioche, mots_trouves]=score(prop, pioche[0], pioche, mots_trouves, devineur);
+        num_manche += 1;
     }
     calcul_score(mots_trouves)
         // proposition des indices pour chaque joueur
@@ -98,71 +124,71 @@ function comparaison(mot_a, mot_b){
     }
     
 }
-function indices(nb_joueur, mot_a_deviner) {
+function indices(indics, mot_a_deviner) {
     let liste_indice = [];  // Liste où on mettra les indices à chaque manche
+    let liste_indices_conserves = [];
 
-    for (let joueur = 0; joueur < nb_joueur; joueur++) {
-        let indice = prompt(`Joueur ${joueur + 1}, entre ton indice : `);
+    for (let joueur of indics) {
+        let indice = prompt(`Joueur ${joueur}, entre ton indice : `);
 
         // Vérifier que l'indice n'est pas trop similaire au mot à deviner
-        while (stringSimilarity.compareTwoStrings(mot_a_deviner, indice)<0.9) {
-            console.log('Joueur ${joueur + 1}, entre un autre indice, celui-ci est trop similaire au mot à deviner : ');
-            indice = prompt(`Joueur ${joueur + 1}, entre un autre indice : `);
+        while (stringSimilarity.compareTwoStrings(mot_a_deviner, indice)>0.9) {
+            console.log(`⚠️ ${joueur}, entre un autre indice, celui-ci est trop similaire au mot à deviner : `);
+            indice = prompt(`${joueur}, entre un autre indice : `);
         }
+        ecrireDansFichier(`Le joueur ${joueur} donne l'indice ${indice}\n`);
+        liste_indice.push(indice);
+        cacher_mots();
+    }
 
-        // Check similaritudes avec les indices précédents. Si pas similaire, ajoute indice à la liste
-        let estUnique = true;
-        for (let i = 0; i < liste_indice.length; i++) {
-            if (comparaison(liste_indice[i], indice)) {
-                estUnique = false;
-                console.log('Cet indice a déjà été donné. Entrer un autre indice.');
-                break;
+
+
+    for (let i= 0; i < liste_indice.length; i++){
+        let compteur = 1;
+        for (let j= 0; j < liste_indice.length; j++){
+            if (i != j){
+                if (liste_indice[i] === liste_indice[j]){
+                    compteur += 1;
+                }
             }
         }
-
-        // Ajouter l'indice si il est unique
-        if (estUnique) {
-            liste_indice.push(indice);
-        } else {
-            joueur--;  // Redemander un indice pour ce joueur, incrémentation à l'envers
+        if (compteur == 1){
+            liste_indices_conserves.push(liste_indice[i]);
         }
     }
-
     // Afficher tous les indices collectés
-    //console.log("\nListe des indices des joueurs :");
-    //console.log(liste_indice);
-    return liste_indice
+    // console.log("\nListe des indices des joueurs :");
+    // console.log(liste_indice);
+    return [liste_indice, liste_indices_conserves]
 }
 
-function score(prompt, mot, pioche, mots_trouves, joueur){
-    if (prompt===0) {
-        console.log("Tu passes");
-        ecrireDansFichier(`Le joueur ${joueur} passe.`);
+function score(prop, mot, pioche, mots_trouves, devineur){
+    pioche.shift();
+    if (prop==="0") {
+        console.log("⏭️ Passage du tour.");
     }
-    else if (comparaison(mot, prompt) === true){
-        console.log(`Réussite, c'était bien le mot ${mot}`);
+    else if (comparaison(mot, prop) === true){
+        console.log(`🎉 Bravo ${devineur} ! Le mot était bien "${mot}" !`);
         mots_trouves.push(mot);
-        ecrireDansFichier(`Le joueur ${joueur} a trouvé le mot ${mot}.`);
     }
     else // Erreur
     {
-        ecrireDansFichier(`Le joueur ${joueur} a proposé le mot ${prompt}.`);
-        ecrireDansFichier(`Le mot à trouver était ${mot}.`);
+        console.log(`❌ Mauvaise réponse. Le mot était "${mot}".`);
+
         if(pioche.length>0){
-            console.log(`Echec, le mot était ${mot}.J'enlève une carte de la pioche`);
+            console.log(`❌ Echec, le mot était ${mot}.J'enlève une carte de la pioche`);
             pioche.shift(); // Supprime le premier mot de la liste
-            ecrireDansFichier(`Une carte de la pioche a été enlevée.`)
         }else{ // Plus de mots dans la pioche, on retire une carte des mots trouvés
-            console.log(`Une carte des mots trouvés a été enlevée.`);
+            console.log(`🔻 Une carte des mots trouvés a été enlevée.`);
             mots_trouves.shift(); // Supprime le premier mot de la liste
         }
     }
+    return [pioche, mots_trouves]
 }
 
 function calcul_score(mots_trouves){
     let score = mots_trouves.length
     console.log(`Fin du jeu ! Vous avez ${score} points.`)
-    ecrireDansFichier(`Fin du jeu ! Les joueurs ont un total de ${score} points.`)
 
     if (score<4){
         console.log("Essayez encore");
@@ -171,26 +197,31 @@ function calcul_score(mots_trouves){
     }else if (8<score<11){
         console.log("Vous êtes dans la moyenne. Arriverez-vous à faire mieux ?");
     }else if (score===11){
-        console.log("Génial ! C'est un score qui se fête !");
+        console.log("🎊 Génial ! C'est un score qui se fête !");
     }else if (score===12){
-        console.log("Incroyable ! Vos amis doivent être impressionnés !");
+        console.log("🔥 Incroyable ! Vos amis doivent être impressionnés !");
     }else if (score===13){
-        console.log("Score parfait ! Y arriverez-vous encore ?");
+        console.log("🏅 Score parfait ! Y arriverez-vous encore ?");
     }
 }
 
-function proposition(indice) {
-    console.log("Voici les indices proposés par les joueurs :");
-    for(let i;i++;i<indice.length){
-        console.log(`Indice ${i} : ${indice[i]}`);
+function proposition(devineur, liste_indices_conserves) {
+    console.log("\n📢 Voici les indices proposés par les joueurs :");
+    if (liste_indices_conserves.length > 0){
+        for (let i = 0; i < liste_indices_conserves.length; i++) {
+            console.log(`💡 Indice ${i + 1} : ${liste_indices_conserves[i]}`);
+        }
+    } else {
+        console.log("Dommage, pas d'indices pour cette fois (eh oui fallait les varier oupsi)");
     }
-    console.log("Vous avez le droit à un seul essai. Si vous voulez passez, tapez 0");
-    let prop = prompt("Votre proposition : ");
+
+    console.log("\n🤔 Vous avez le droit à un seul essai. Si vous voulez passez, tapez 0");
+    let prop = prompt(`${devineur}, quelle est ta proposition ? `);
     return prop;
 }
 
 async function ecrireDansFichier(contenu, new_file=false) {
-    const mode = '';
+    let mode = '';
     if (new_file===true) {
         mode = 'w';
     }else {
@@ -199,7 +230,7 @@ async function ecrireDansFichier(contenu, new_file=false) {
     try{
         await fs.writeFile("historique.txt", contenu, {flag: mode});
     } catch(err) {
-        console.log('Erreur lors de l\'écriture dans le fichier :', err);
+        console.log('❌ Erreur lors de l\'écriture dans le fichier :', err);
     }
 
 }

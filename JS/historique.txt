@@ -1,9 +1,20 @@
-Début du jeu
-Le joueur 1 a proposé le mot 0.
-
-Une carte de la pioche a été enlevée.
-
-Fin du jeu ! Les joueurs ont un total de 0 points.
-
-Le mot à trouver était clair de lune.
-
+Debut jeu
+Le joueur 1,3 donne l'indice eau
+Le joueur 1,3 donne l'indice animal
+Manche 1
+2 a trouvé le mot "dauphin".
+Le joueur 2,3 donne l'indice fleur
+1 a proposé "0", mais le mot était "jonquille"
+.Le joueur 2,3 donne l'indice fleur
+Manche 3
+Le joueur 1,2 donne l'indice musique
+Manche 2
+Le joueur 1,2 donne l'indice requin
+3 a proposé "youpi", mais le mot était "orchestre"
+.Fin du jeu ! Les joueurs ont un total de 0 points.
+Le joueur 1 donne l'indice ghuy
+Le joueur 2 donne l'indice gk
+Le joueur 4 donne l'indice gu
+Le joueur 1 donne l'indice gyui
+Le joueur 3 donne l'indice gyi
+Le joueur 2 donne l'indice hui
