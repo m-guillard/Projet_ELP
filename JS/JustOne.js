@@ -2,6 +2,7 @@
 
 const prompt = require('prompt-sync')();  // Charger le module prompt-sync
 const fs = require('fs-extra');  // Correct
+const stringSimilarity = require("string-similarity");
 
 
 function manche(nb_joueur, mot_a_deviner){
@@ -104,7 +105,7 @@ function indices(nb_joueur, mot_a_deviner) {
         let indice = prompt(`Joueur ${joueur + 1}, entre ton indice : `);
 
         // Vérifier que l'indice n'est pas trop similaire au mot à deviner
-        while (comparaison(mot_a_deviner, indice)) {
+        while (stringSimilarity.compareTwoStrings(mot_a_deviner, indice)<0.9) {
             console.log('Joueur ${joueur + 1}, entre un autre indice, celui-ci est trop similaire au mot à deviner : ');
             indice = prompt(`Joueur ${joueur + 1}, entre un autre indice : `);
         }
@@ -189,10 +190,11 @@ function proposition(indice) {
 }
 
 async function ecrireDansFichier(contenu, new_file=false) {
+    const mode = '';
     if (new_file===true) {
-        const mode = 'w';
+        mode = 'w';
     }else {
-        const mode = 'a';
+        mode = 'a';
     }
     try{
         await fs.writeFile("historique.txt", contenu, {flag: mode});
